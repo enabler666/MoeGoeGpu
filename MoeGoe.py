@@ -6,7 +6,7 @@ import utils
 import commons
 import sys
 import re
-from torch import no_grad, LongTensor
+from torch import no_grad, LongTensor, device, cuda
 import logging
 
 logging.getLogger('numba').setLevel(logging.WARNING)
@@ -36,6 +36,7 @@ def ask_if_continue():
         if answer == 'y':
             break
         elif answer == 'n':
+            cuda.empty_cache()
             sys.exit(0)
 
 
@@ -103,6 +104,7 @@ if __name__ == '__main__':
         **hps_ms.model)
     _ = net_g_ms.eval()
     utils.load_checkpoint(model, net_g_ms)
+    net_g_ms.to(device('cuda:0'))
 
     def voice_conversion():
         audio_path = input('Path of an audio file to convert:\n')
@@ -156,9 +158,9 @@ if __name__ == '__main__':
                     out_path = input('Path to save: ')
 
                     with no_grad():
-                        x_tst = stn_tst.unsqueeze(0)
-                        x_tst_lengths = LongTensor([stn_tst.size(0)])
-                        sid = LongTensor([speaker_id])
+                        x_tst = stn_tst.unsqueeze(0).to(device('cuda:0'))
+                        x_tst_lengths = LongTensor([stn_tst.size(0)]).to(device('cuda:0'))
+                        sid = LongTensor([speaker_id]).to(device('cuda:0'))
                         audio = net_g_ms.infer(x_tst, x_tst_lengths, sid=sid, noise_scale=noise_scale,
                                                noise_scale_w=noise_scale_w, length_scale=length_scale)[0][0, 0].data.cpu().float().numpy()
 
